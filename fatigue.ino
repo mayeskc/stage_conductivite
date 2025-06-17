@@ -1,6 +1,7 @@
 #include "fatiguer.h"    // AppIMPInit, AppIMPCtrl, AppIMPISR, AppIMPCfg_Type
 #include <LibPrintf.h>
 #include "ad5940.h"
+#include "rcal.h"
 
 // ==== Paramètres généraux ====
 #define APPBUFF_SIZE 512
@@ -9,14 +10,48 @@ uint32_t AppBuff[APPBUFF_SIZE];
 // ==== Affichage des résultats ====
 int32_t ImpedanceShowResult(uint32_t *pData, uint32_t DataCount)
 {
+  static int first = 1;
   float freq;
   fImpPol_Type *pImp = (fImpPol_Type*)pData;
   AppIMPCtrl(IMPCTRL_GETFREQ, &freq);
 
-  printf("Freq: %.2f Hz\n", freq);
+  if (first) {
+    printf("Freq   RzMag   RzPhase\n");
+    first = 0;
+  }
+
   for(int i = 0; i < DataCount; i++)
-    printf("RzMag: %8.2f Ohm, RzPhase: %7.2f deg\n", pImp[i].Magnitude, pImp[i].Phase * 180.0f / MATH_PI);
+    printf("%.2f  %.2f  %.2f\n", freq, pImp[i].Magnitude, pImp[i].Phase * 180.0f / MATH_PI);
+
   return 0;
+}
+
+// ==== Calibration HSDAC et ADC ====
+void Calibrate_HSDAC_and_ADC(void)
+{
+  HSDACCal_Type hsdac_cal;
+  ADCPGACal_Type adcpga_cal;
+
+  printf("Calibration ADC Offset (Gain 1)\n");
+  adcpga_cal.AdcClkFreq = 16000000;
+  adcpga_cal.ADCPga = ADCPGA_1;
+  adcpga_cal.ADCSinc2Osr = ADCSINC2OSR_1333;
+  adcpga_cal.ADCSinc3Osr = ADCSINC3OSR_2;
+  adcpga_cal.PGACalType = PGACALTYPE_OFFSET;
+  adcpga_cal.TimeOut10us = 1000;
+  adcpga_cal.VRef1p11 = 1.11;
+  adcpga_cal.VRef1p82 = 1.82;
+  AD5940_ADCPGACal(&adcpga_cal);
+
+  // Calibration DAC pour toutes les plages utilisées (exemple : 607mV et 121mV)
+
+  printf("Calibration HSDAC 121mV Range\n");
+  hsdac_cal.ExcitBufGain = EXCITBUFGAIN_2;
+  hsdac_cal.HsDacGain = HSDACGAIN_0P2;
+  hsdac_cal.AfePwrMode = AFEPWR_HP;
+  AD5940_HSDACCal(&hsdac_cal);
+
+  printf("Calibration HSDAC terminée !\n");
 }
 
 // ==== Configuration matérielle AD5940 ====
@@ -26,9 +61,8 @@ static int32_t AD5940PlatformCfg(void)
   FIFOCfg_Type fifo_cfg;
   AGPIOCfg_Type gpio_cfg;
 
-
   AD5940_HWReset();
-  
+  delay(50); 
   AD5940_Initialize();
 
   // Activation du bit 3 de SWMUX pour le Common Mode entre AIN2 et AIN3
@@ -56,7 +90,6 @@ static int32_t AD5940PlatformCfg(void)
   clk_cfg.LFOSCEn = bTRUE;
   AD5940_CLKCfg(&clk_cfg);
 
-
   // FIFO configuration
   fifo_cfg.FIFOEn = bFALSE;
   fifo_cfg.FIFOMode = FIFOMODE_FIFO;
@@ -73,14 +106,6 @@ static int32_t AD5940PlatformCfg(void)
   AD5940_INTCCfg(AFEINTC_0, AFEINTSRC_DATAFIFOTHRESH, bTRUE);
   AD5940_INTCClrFlag(AFEINTSRC_ALLINT);
 
-  // GPIO (optionnel, pour debug ou sync)
-  gpio_cfg.FuncSet = GP0_INT | GP1_SLEEP | GP2_SYNC | SWD_AFE3;
-  gpio_cfg.InputEnSet = 0;
-  gpio_cfg.OutputEnSet = AGPIO_Pin0 | AGPIO_Pin1 | AGPIO_Pin2;
-  gpio_cfg.OutVal = 0;
-  gpio_cfg.PullEnSet = 0;
-  AD5940_AGPIOCfg(&gpio_cfg);
-
   return 0;
 }
 
@@ -95,7 +120,7 @@ void AD5940ImpedanceStructInit(void)
   pImpedanceCfg->SeqStartAddr = 0;
   pImpedanceCfg->MaxSeqLen = 512;
 
-  pImpedanceCfg->RcalVal = 10000.0;
+  pImpedanceCfg->RcalVal = 10000.0f;
   pImpedanceCfg->SinFreq = 60000.0;
   pImpedanceCfg->FifoThresh = 4;
 
@@ -106,17 +131,17 @@ void AD5940ImpedanceStructInit(void)
   pImpedanceCfg->TswitchSel = SWT_AIN1;
 
   /* RTIA pour la gamme attendue */
-  pImpedanceCfg->HstiaRtiaSel = HSTIARTIA_5K;
+  pImpedanceCfg->HstiaRtiaSel = HSTIARTIA_10K;
 
   /* Sweep */
   pImpedanceCfg->SweepCfg.SweepEn = bTRUE;
-  pImpedanceCfg->SweepCfg.SweepStart = 100.0f;
+  pImpedanceCfg->SweepCfg.SweepStart = 1000.0f;
   pImpedanceCfg->SweepCfg.SweepStop = 100000.0f;
-  pImpedanceCfg->SweepCfg.SweepPoints = 101;
+  pImpedanceCfg->SweepCfg.SweepPoints = 100;
   pImpedanceCfg->SweepCfg.SweepLog = bTRUE;
 
   /* Puissance & filtres */
-  pImpedanceCfg->PwrMod = AFEPWR_LP;
+  pImpedanceCfg->PwrMod = AFEPWR_HP;
   pImpedanceCfg->ADCSinc3Osr = ADCSINC3OSR_2;
   pImpedanceCfg->DftNum = DFTNUM_16384;
   pImpedanceCfg->DftSrc = DFTSRC_SINC3;
@@ -126,12 +151,20 @@ void AD5940ImpedanceStructInit(void)
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial); // Attendre l'ouverture du port série
-
+  while (!Serial);
+  delay(100); // Attendre l'ouverture du port série
+ pinMode(A4, OUTPUT);
+  pinMode(A5, OUTPUT);
+  select_r_cal(3);
   AD5940_MCUResourceInit(NULL); 
+  delay(10);
   AD5940PlatformCfg();
-  AD5940ImpedanceStructInit();
+  delay(10);
 
+  Calibrate_HSDAC_and_ADC(); // ===> Calibration ajoutée ici
+delay(10);
+  AD5940ImpedanceStructInit();
+delay(10);
   int ret = AppIMPInit(AppBuff, APPBUFF_SIZE);
   Serial.print("AppIMPInit return = "); Serial.println(ret);
   if (ret != 0) {
@@ -160,4 +193,4 @@ void loop() {
     ImpedanceShowResult(AppBuff, temp);
   } 
   delay(1000);
-}
+} 
