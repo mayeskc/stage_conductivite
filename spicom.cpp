@@ -3,6 +3,7 @@
 
 #define SPI_CS_AD5940_Pin A2
 #define AD5940_ResetPin A3
+
 //*******************************************************
 //declarations/definitions
 volatile static uint32_t ucInterrupted = 0;       /* Flag to indicate interrupt occurred */
