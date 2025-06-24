@@ -33,7 +33,7 @@ void Calibrate_HSDAC_and_ADC(void)
   ADCPGACal_Type adcpga_cal;
 
   printf("Calibration ADC Offset (Gain 1)\n");
-  adcpga_cal.AdcClkFreq = 16000000;
+  adcpga_cal.AdcClkFreq = 4000000;
   adcpga_cal.ADCPga = ADCPGA_1;
   adcpga_cal.ADCSinc2Osr = ADCSINC2OSR_1333;
   adcpga_cal.ADCSinc3Osr = ADCSINC3OSR_2;
@@ -42,8 +42,6 @@ void Calibrate_HSDAC_and_ADC(void)
   adcpga_cal.VRef1p11 = 1.11;
   adcpga_cal.VRef1p82 = 1.82;
   AD5940_ADCPGACal(&adcpga_cal);
-
-  // Calibration DAC pour toutes les plages utilisées (exemple : 607mV et 121mV)
 
   printf("Calibration HSDAC 121mV Range\n");
   hsdac_cal.ExcitBufGain = EXCITBUFGAIN_2;
@@ -59,20 +57,18 @@ static int32_t AD5940PlatformCfg(void)
 {
   CLKCfg_Type clk_cfg;
   FIFOCfg_Type fifo_cfg;
-  AGPIOCfg_Type gpio_cfg;
 
   AD5940_HWReset();
-  delay(50); 
   AD5940_Initialize();
-
-  // Activation du bit 3 de SWMUX pour le Common Mode entre AIN2 et AIN3
+  AD5940_CsSet();
+  delay(10); 
+  AD5940_RstSet();
+  // Configuration du Switch Matrix (CMMUX)
   uint32_t swmux = AD5940_ReadReg(REG_AFE_SWMUX);
   Serial.print("SWMUX avant = 0x"); Serial.println(swmux, HEX);
-
   swmux |= BITM_AFE_SWMUX_CMMUX;
   AD5940_WriteReg(REG_AFE_SWMUX, swmux);
-
-  swmux = AD5940_ReadReg(REG_AFE_SWMUX); // relire pour vérifier
+  swmux = AD5940_ReadReg(REG_AFE_SWMUX);
   Serial.print("SWMUX après = 0x"); Serial.println(swmux, HEX);
 
   // Vérification communication SPI
@@ -114,30 +110,27 @@ extern AppIMPCfg_Type AppIMPCfg;
 void AD5940ImpedanceStructInit(void)
 {
   AppIMPCfg_Type *pImpedanceCfg;
-  
   AppIMPGetCfg(&pImpedanceCfg);
-  /* Step1: configure initialization sequence Info */
+
   pImpedanceCfg->SeqStartAddr = 0;
   pImpedanceCfg->MaxSeqLen = 512;
-
   pImpedanceCfg->RcalVal = 10000.0f;
   pImpedanceCfg->SinFreq = 60000.0;
   pImpedanceCfg->FifoThresh = 4;
 
-  /* Switch matrix 4-wire */
+  /*   Switch matrix 4-electrodes  */
   pImpedanceCfg->DswitchSel = SWD_CE0;
   pImpedanceCfg->PswitchSel = SWP_AIN2;
   pImpedanceCfg->NswitchSel = SWN_AIN3;
   pImpedanceCfg->TswitchSel = SWT_AIN1;
 
-  /* RTIA pour la gamme attendue */
   pImpedanceCfg->HstiaRtiaSel = HSTIARTIA_10K;
 
-  /* Sweep */
+  /* Sweep de frequence */
   pImpedanceCfg->SweepCfg.SweepEn = bTRUE;
   pImpedanceCfg->SweepCfg.SweepStart = 1000.0f;
-  pImpedanceCfg->SweepCfg.SweepStop = 100000.0f;
-  pImpedanceCfg->SweepCfg.SweepPoints = 100;
+  pImpedanceCfg->SweepCfg.SweepStop = 10000.0f;
+  pImpedanceCfg->SweepCfg.SweepPoints = 101;
   pImpedanceCfg->SweepCfg.SweepLog = bTRUE;
 
   /* Puissance & filtres */
@@ -148,49 +141,57 @@ void AD5940ImpedanceStructInit(void)
 }
 
 // ==== SETUP / LOOP ====
-
 void setup() {
   Serial.begin(115200);
   while (!Serial);
-  delay(100); // Attendre l'ouverture du port série
- pinMode(A4, OUTPUT);
-  pinMode(A5, OUTPUT);
-  select_r_cal(3);
-  AD5940_MCUResourceInit(NULL); 
-  delay(10);
-  AD5940PlatformCfg();
-  delay(10);
 
-  Calibrate_HSDAC_and_ADC(); // ===> Calibration ajoutée ici
-delay(10);
+  pinMode(A4, OUTPUT);
+  pinMode(A5, OUTPUT);
+  
+
+  AD5940_MCUResourceInit(NULL); 
+  AD5940PlatformCfg();
+
+  Calibrate_HSDAC_and_ADC();
   AD5940ImpedanceStructInit();
-delay(10);
+int tries = AD5940_WakeUp(10);
+if (tries > 10) {
+    printf("Erreur réveil AD5940: échec de communication SPI\n");
+     // Bloque pour débogage
+} else {
+    printf("AD5940 réveillé en %d essais\n", tries);
+}
   int ret = AppIMPInit(AppBuff, APPBUFF_SIZE);
   Serial.print("AppIMPInit return = "); Serial.println(ret);
   if (ret != 0) {
-    Serial.println("ERREUR: AppIMPInit a échoué !");
+    Serial.println("AppIMPInit a échoué !");
     while (1);
   }
 
   ret = AppIMPCtrl(IMPCTRL_START, 0);
-  Serial.print("AppIMPCtrl(START) return = "); Serial.println(ret);
+  Serial.print("AppIMPCtrl return = "); Serial.println(ret);
   if (ret != 0) {
-    Serial.println("ERREUR: AppIMPCtrl(START) a échoué !");
+    Serial.println("AppIMPCtrl(START) a échoué !");
     while (1);
   }
 
   float freq = 0;
   AppIMPCtrl(IMPCTRL_GETFREQ, &freq);
-  Serial.print("Fréquence sweep active (après start) = "); Serial.println(freq, 2);
+  Serial.print("Fréquence sweep  = "); Serial.println(freq, 2);
 
-  Serial.println("AD5940 Impedance Test - Init complete!");
+  Serial.println("Init complete!");
 }
 
+bool sweep_done = false; // Ajoute une variable globale pour savoir si le sweep est fini
+
 void loop() {
+  select_r_cal(3);
   uint32_t temp = APPBUFF_SIZE;
   AppIMPISR(AppBuff, &temp);
   if (temp) {
     ImpedanceShowResult(AppBuff, temp);
-  } 
-  delay(1000);
-} 
+
+  }
+
+  delay(1000); // Pour affichage lisible
+}

@@ -3,70 +3,65 @@
 #include "string.h"
 #include "math.h"
 #include "fatiguer.h"
-//include the printf.h from the used arduino printf library as it forwards all printf statements to the Serial object!
-//see https://www.avrfreaks.net/forum/how-use-printf-statements-external-c-file-arduino
 #include "../extras/printf/printf.h"
 
 /* Default LPDAC resolution(2.5V internal reference). */
 #define DAC12BITVOLT_1LSB   (2200.0f/4095)  //mV
 #define DAC6BITVOLT_1LSB    (DAC12BITVOLT_1LSB*64)  //mV
 
-
-
-/**
- * @brief The ramp application paramters.
- * @details Do not modify following default parameters. Use the function in AD5940Main.c to change it.
- *
- * */
+/* 
+  Application configuration structure. Specified by user from template.
+  The variables are usable in this whole application.
+  It includes basic configuration for sequencer generator and application related parameters
+*/
 AppIMPCfg_Type AppIMPCfg = 
 {
-  .bParaChanged = bTRUE,
-  .SeqStartAddr = 0, // Initialaztion sequence start address in SRAM of AD5940
-  .MaxSeqLen = 0, //Limit the maximum sequence.
+  .bParaChanged = bFALSE,
+  .SeqStartAddr = 0,
+  .MaxSeqLen = 0,
   
-  .SeqStartAddrCal = 0, // Measurement sequence start address in SRAM of AD5940
-  .MaxSeqLenCal = 0,    // Limit the maximum sequence.
+  .SeqStartAddrCal = 0,
+  .MaxSeqLenCal = 0,
 
-  .ImpODR = 20.0,           /* 20.0 Hz*/ 
-  .NumOfData = -1,  //
-  .SysClkFreq = 16000000.0,    // 16MHz
-  .WuptClkFreq = 32000.0, // 32kHz
-  .AdcClkFreq = 16000000.0,// 16MHz
-  .RcalVal = 10000.0,     // 10kOhm 
+  .ImpODR = 20.0,           /* 20.0 Hz*/
+  .NumOfData = -1,
+  .SysClkFreq = 16000000.0,
+  .WuptClkFreq = 32000.0,
+  .AdcClkFreq = 16000000.0,
+  .RcalVal = 10000.0,
 
-   // Switch matrix configuration
   .DswitchSel = SWD_CE0,
-  .PswitchSel = SWP_AIN2, 
-  .NswitchSel = SWN_AIN3,
+  .PswitchSel = SWP_CE0,
+  .NswitchSel = SWN_AIN1,
   .TswitchSel = SWT_AIN1,
 
-  .PwrMod = AFEPWR_HP, //   Power mode
+  .PwrMod = AFEPWR_HP,
 
-  .HstiaRtiaSel = HSTIARTIA_5K, // RTIA : transforme le courant en tension mesurable
-  .ExcitBufGain = EXCITBUFGAIN_2, //  gain du buffer d'excitation
-  .HsDacGain = HSDACGAIN_1, //  gain du DAC de haute vitesse
-  .HsDacUpdateRate = 7,   //  update rate of DAC, 7 means 1/8 of system clock
-  .DacVoltPP = 800.0, //  DAC output voltage in mV peak to peak. Maximum value is 800mVpp. Peak to peak voltage
-  .BiasVolt = -0.0f, //  The excitation signal is DC+AC. This parameter decides the DC value in mV unit. 0.0mV means no DC bias.
+  .HstiaRtiaSel = HSTIARTIA_5K,
+  .ExcitBufGain = EXCITBUFGAIN_2,
+  .HsDacGain = HSDACGAIN_1,
+  .HsDacUpdateRate = 7,
+  .DacVoltPP = 800.0,
+  .BiasVolt = -0.0f,
 
-  .SinFreq = 600000.0, /* 1000Hz */
+  .SinFreq = 100000.0, /* 1000Hz */
 
-  .DftNum = DFTNUM_16384,     // NUMERO DE TRANSFORMEE DE FOURIER
-  .DftSrc = DFTSRC_SINC3,   // DFT Source a la sortie du filtre sinc3
-  .HanWinEn = bTRUE,    // reduire effets de leakage
+  .DftNum = DFTNUM_16384,
+  .DftSrc = DFTSRC_SINC3,
+  .HanWinEn = bTRUE,
 
-  .AdcPgaGain = ADCPGA_1, // Amplifie la tension d'entrée de 1x
+  .AdcPgaGain = ADCPGA_1,
   .ADCSinc3Osr = ADCSINC3OSR_2,
   .ADCSinc2Osr = ADCSINC2OSR_22,
 
   .ADCAvgNum = ADCAVGNUM_16,
 
-  .SweepCfg.SweepEn = bTRUE, // balayage de frequence
-  .SweepCfg.SweepStart = 1000, // frequence de debut du balayage
-  .SweepCfg.SweepStop = 100000.0,  // frequence de fin du balayage
-  .SweepCfg.SweepPoints = 3, // nombre de points de mesure
-  .SweepCfg.SweepLog = bFALSE, // 0: Linear, 1: Logarithmic
-  .SweepCfg.SweepIndex = 0, // Current position du balayage
+  .SweepCfg.SweepEn = bTRUE,
+  .SweepCfg.SweepStart = 1000,
+  .SweepCfg.SweepStop = 100000.0,
+  .SweepCfg.SweepPoints = 101,
+  .SweepCfg.SweepLog = bFALSE,
+  .SweepCfg.SweepIndex = 0,
 
   .FifoThresh = 4,
   .IMPInited = bFALSE,
@@ -74,19 +69,8 @@ AppIMPCfg_Type AppIMPCfg =
 };
 
 /**
- * @todo add paramater check.
- * SampleDelay will limited by wakeup timer, check WUPT register value calculation equation below for reference.
- * SampleDelay > 1.0ms is acceptable.
- * RampDuration/StepNumber > 2.0ms
- * ...
- * */
-
-
-/**
- * @brief This function is provided for upper controllers that want to change
- *        application parameters specially for user defined parameters.
- * @param pCfg: The pointer used to store application configuration structure pointer.
- * @return none.
+   This function is provided for upper controllers that want to change 
+   application parameters specially for user defined parameters.
 */
 int32_t AppIMPGetCfg(void *pCfg)
 {
@@ -403,87 +387,91 @@ int32_t AppIMPInit(uint32_t *pBuffer, uint32_t BufferSize)
   SEQCfg_Type seq_cfg;
   FIFOCfg_Type fifo_cfg;
 
-  printf("AppIMPInit: Debut\n");
+  if(AD5940_WakeUp(10) > 10)  /* Wakeup AFE by read register, read 10 times at most */
+    return AD5940ERR_WAKEUP;  /* Wakeup Failed */
 
-  if(AD5940_WakeUp(10) > 10) {
-    printf("AppIMPInit: WakeUp FAILED\n");
-    return AD5940ERR_WAKEUP;
-  }
-
-  // Configure sequencer and stop it
-  seq_cfg.SeqMemSize = SEQMEMSIZE_2KB;  // 2kB SRAM for sequencer, rest for FIFO
+  /* Configure sequencer and stop it */
+  seq_cfg.SeqMemSize = SEQMEMSIZE_2KB;  /* 2kB SRAM is used for sequencer, others for data FIFO */
   seq_cfg.SeqBreakEn = bFALSE;
   seq_cfg.SeqIgnoreEn = bTRUE;
   seq_cfg.SeqCntCRCClr = bTRUE;
   seq_cfg.SeqEnable = bFALSE;
   seq_cfg.SeqWrTimer = 0;
   AD5940_SEQCfg(&seq_cfg);
-  printf("AppIMPInit: SEQCfg OK\n");
   
-  // Reconfigure FIFO
-  AD5940_FIFOCtrlS(FIFOSRC_DFT, bFALSE); // Disable FIFO first
+  /* Reconfigure FIFO */
+  AD5940_FIFOCtrlS(FIFOSRC_DFT, bFALSE);									/* Disable FIFO firstly */
   fifo_cfg.FIFOEn = bTRUE;
   fifo_cfg.FIFOMode = FIFOMODE_FIFO;
-  fifo_cfg.FIFOSize = FIFOSIZE_4KB;      // 4kB for FIFO, rest for sequencer
+  fifo_cfg.FIFOSize = FIFOSIZE_4KB;                       /* 4kB for FIFO, The reset 2kB for sequencer */
   fifo_cfg.FIFOSrc = FIFOSRC_DFT;
-  fifo_cfg.FIFOThresh = AppIMPCfg.FifoThresh;
+  fifo_cfg.FIFOThresh = AppIMPCfg.FifoThresh;              /* DFT result. One pair for RCAL, another for Rz. One DFT result have real part and imaginary part */
   AD5940_FIFOCfg(&fifo_cfg);
-  printf("AppIMPInit: FIFO OK\n");
   AD5940_INTCClrFlag(AFEINTSRC_ALLINT);
 
-  // Start sequence generator
-  // Initialize sequencer generator
-  if((AppIMPCfg.IMPInited == bFALSE) || (AppIMPCfg.bParaChanged == bTRUE))
+  /* Start sequence generator */
+  /* Initialize sequencer generator */
+  if((AppIMPCfg.IMPInited == bFALSE)||\
+       (AppIMPCfg.bParaChanged == bTRUE))
   {
-    printf("AppIMPInit: Bloc initialisation sequence\n");
-
-    if(pBuffer == 0) {
-      printf("AppIMPInit: ERREUR pBuffer == 0\n");
-      return AD5940ERR_PARA;
-    }
-    if(BufferSize == 0) {
-      printf("AppIMPInit: ERREUR BufferSize == 0\n");
-      return AD5940ERR_PARA;
-    }
-
+    if(pBuffer == 0)  return AD5940ERR_PARA;
+    if(BufferSize == 0) return AD5940ERR_PARA;   
     AD5940_SEQGenInit(pBuffer, BufferSize);
-    printf("AppIMPInit: SEQGenInit OK\n");
 
-    printf("AppIMPInit: Avant AppIMPSeqCfgGen()\n");
-    error = AppIMPSeqCfgGen();
-    printf("AppIMPInit: AppIMPSeqCfgGen() return = %ld\n", error);
+    /* Generate initialize sequence */
+    error = AppIMPSeqCfgGen(); /* Application initialization sequence using either MCU or sequencer */
     if(error != AD5940ERR_OK) return error;
 
-    printf("AppIMPInit: Avant AppIMPSeqMeasureGen()\n");
+    /* Generate measurement sequence */
     error = AppIMPSeqMeasureGen();
-    printf("AppIMPInit: AppIMPSeqMeasureGen() return = %ld\n", error);
     if(error != AD5940ERR_OK) return error;
 
-    AppIMPCfg.bParaChanged = bFALSE;
-    printf("AppIMPInit: bParaChanged clear\n");
+    AppIMPCfg.bParaChanged = bFALSE; /* Clear this flag as we already implemented the new configuration */
   }
 
-  // Initialization sequencer
+  /* Initialization sequencer  */
   AppIMPCfg.InitSeqInfo.WriteSRAM = bFALSE;
   AD5940_SEQInfoCfg(&AppIMPCfg.InitSeqInfo);
   seq_cfg.SeqEnable = bTRUE;
-  AD5940_SEQCfg(&seq_cfg);  // Enable sequencer
+  AD5940_SEQCfg(&seq_cfg);  /* Enable sequencer */
   AD5940_SEQMmrTrig(AppIMPCfg.InitSeqInfo.SeqId);
-  printf("AppIMPInit: SEQ MmrTrig\n");
   while(AD5940_INTCTestFlag(AFEINTC_1, AFEINTSRC_ENDSEQ) == bFALSE);
-
-  // Measurement sequence
+  
+  /* Measurement sequence  */
   AppIMPCfg.MeasureSeqInfo.WriteSRAM = bFALSE;
   AD5940_SEQInfoCfg(&AppIMPCfg.MeasureSeqInfo);
 
   seq_cfg.SeqEnable = bTRUE;
-  AD5940_SEQCfg(&seq_cfg);  // Enable sequencer, and wait for trigger
-  AD5940_ClrMCUIntFlag();   // Clear interrupt flag generated before
+  AD5940_SEQCfg(&seq_cfg);  /* Enable sequencer, and wait for trigger */
+  AD5940_ClrMCUIntFlag();   /* Clear interrupt flag generated before */
 
   AD5940_AFEPwrBW(AppIMPCfg.PwrMod, AFEBW_250KHZ);
 
-  AppIMPCfg.IMPInited = bTRUE;  // IMP application has been initialized.
-  printf("AppIMPInit: FIN OK\n");
+  AppIMPCfg.IMPInited = bTRUE;  /* IMP application has been initialized. */
+  return AD5940ERR_OK;
+}
+
+/* Modify registers when AFE wakeup */
+int32_t AppIMPRegModify(int32_t * const pData, uint32_t *pDataCount)
+{
+  if(AppIMPCfg.NumOfData > 0)
+  {
+    AppIMPCfg.FifoDataCount += *pDataCount/4;
+    if(AppIMPCfg.FifoDataCount >= AppIMPCfg.NumOfData)
+    {
+      AD5940_WUPTCtrl(bFALSE);
+      return AD5940ERR_OK;
+    }
+  }
+  if(AppIMPCfg.StopRequired == bTRUE)
+  {
+    AD5940_WUPTCtrl(bFALSE);
+    return AD5940ERR_OK;
+  }
+  if(AppIMPCfg.SweepCfg.SweepEn) /* Need to set new frequency and set power mode */
+  {
+    AD5940_WGFreqCtrlS(AppIMPCfg.SweepNextFreq, AppIMPCfg.SysClkFreq);
+  }
   return AD5940ERR_OK;
 }
 
@@ -525,10 +513,8 @@ int32_t AppIMPDataProcess(int32_t * const pData, uint32_t *pDataCount)
 
     RzMag = RcalMag/RzMag*AppIMPCfg.RcalVal;
     RzPhase = RcalPhase - RzPhase;
-    printf("V:%d,%d,I:%d,%d ",pDftRcal->Real,pDftRcal->Image, pDftRz->Real, pDftRz->Image);
-    printf("RCAL: Re=%ld Im=%ld | DUT: Re=%ld Im=%ld\n", 
-  pDftRcal->Real, pDftRcal->Image, 
-  pDftRz->Real, pDftRz->Image);
+    //printf("V:%d,%d,I:%d,%d ",pDftRcal->Real,pDftRcal->Image, pDftRz->Real, pDftRz->Image);
+    
     pOut[i].Magnitude = RzMag;
     pOut[i].Phase = RzPhase;
   }
@@ -540,7 +526,6 @@ int32_t AppIMPDataProcess(int32_t * const pData, uint32_t *pDataCount)
     AppIMPCfg.FreqofData = AppIMPCfg.SweepCurrFreq;
     AppIMPCfg.SweepCurrFreq = AppIMPCfg.SweepNextFreq;
     AD5940_SweepNext(&AppIMPCfg.SweepCfg, &AppIMPCfg.SweepNextFreq);
-    
   }
 
   return 0;
@@ -549,8 +534,6 @@ int32_t AppIMPDataProcess(int32_t * const pData, uint32_t *pDataCount)
 /**
 
 */
-
-
 int32_t AppIMPISR(void *pBuff, uint32_t *pCount)
 {
   uint32_t BuffCount;
@@ -574,6 +557,7 @@ int32_t AppIMPISR(void *pBuff, uint32_t *pCount)
     }
     AD5940_FIFORd((uint32_t *)pBuff, FifoCnt);
     AD5940_INTCClrFlag(AFEINTSRC_DATAFIFOTHRESH);
+    AppIMPRegModify(pBuff, &FifoCnt);   /* If there is need to do AFE re-configure, do it here when AFE is in active state */
     //AD5940_EnterSleepS(); /* Manually put AFE back to hibernate mode. This operation only takes effect when register value is ACTIVE previously */
     AD5940_SleepKeyCtrlS(SLPKEY_UNLOCK);  /* Allow AFE to enter sleep mode. */
     /* Process data */ 
@@ -583,4 +567,4 @@ int32_t AppIMPISR(void *pBuff, uint32_t *pCount)
   }
   
   return 0;
-} 
+}

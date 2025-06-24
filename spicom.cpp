@@ -26,7 +26,7 @@ void AD5940_ReadWriteNBytes(unsigned char *pSendBuffer, unsigned char *pRecvBuff
   //speedMaximum: 12MHz found to be max for Adafruit Feather M0, AD5940 rated for max 16MHz clock frequency
   //dataOrder: MSB first
   //dataMode: SCLK idles low/ data clocked on SCLK falling edge --> mode 0
-  SPI.beginTransaction(SPISettings(12000000, MSBFIRST, SPI_MODE0));
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
 
   for (int i = 0; i < length; i++)
   {
@@ -89,6 +89,7 @@ uint32_t AD5940_ClrMCUIntFlag(void)
 
 uint32_t AD5940_MCUResourceInit(void *pCfg)
 {
+ 
   /* Step1, initialize SPI peripheral and its GPIOs for CS/RST */
   //start the SPI library (setup SCK, MOSI, and MISO pins)
   SPI.begin();
@@ -100,7 +101,9 @@ uint32_t AD5940_MCUResourceInit(void *pCfg)
 
   //chip select high to de-select AD5940 initially
   AD5940_CsSet();
+  delay(10); 
   AD5940_RstSet();
+  delay(10); 
   return 0;
 }
 
