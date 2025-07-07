@@ -26,7 +26,7 @@ void AD5940_ReadWriteNBytes(unsigned char *pSendBuffer, unsigned char *pRecvBuff
   //speedMaximum: 12MHz found to be max for Adafruit Feather M0, AD5940 rated for max 16MHz clock frequency
   //dataOrder: MSB first
   //dataMode: SCLK idles low/ data clocked on SCLK falling edge --> mode 0
-  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+  SPI.beginTransaction(SPISettings(6000000, MSBFIRST, SPI_MODE0));
 
   for (int i = 0; i < length; i++)
   {
@@ -34,6 +34,15 @@ void AD5940_ReadWriteNBytes(unsigned char *pSendBuffer, unsigned char *pRecvBuff
   }
 
   SPI.endTransaction(); //transaction over
+}
+
+void hardwareResetAD5940(void) 
+{
+  pinMode(AD5940_ResetPin, OUTPUT);
+  digitalWrite(AD5940_ResetPin, LOW);   // Reset activé (niveau bas)
+  delay(10);                            // Attendre 10 ms
+  digitalWrite(AD5940_ResetPin, HIGH);  // Reset relâché (niveau haut)
+  delay(10);                            // Attendre que la puce démarre
 }
 
 void AD5940_CsClr(void)
