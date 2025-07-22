@@ -11,7 +11,7 @@ void AD5940_ReadWriteNBytes(unsigned char *pSendBuffer, unsigned char *pRecvBuff
 
 void AD5940_CsClr(void);
 void AD5940_CsSet(void);
-
+void hardwareResetAD5940(void);
 void AD5940_RstSet(void);
 void AD5940_RstClr(void);
 

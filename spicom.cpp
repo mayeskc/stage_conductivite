@@ -1,5 +1,6 @@
 #include "ad5940.h"
 #include <SPI.h>
+#include "spicom.h"
 
 #define SPI_CS_AD5940_Pin A2
 #define AD5940_ResetPin A3
@@ -26,7 +27,7 @@ void AD5940_ReadWriteNBytes(unsigned char *pSendBuffer, unsigned char *pRecvBuff
   //speedMaximum: 12MHz found to be max for Adafruit Feather M0, AD5940 rated for max 16MHz clock frequency
   //dataOrder: MSB first
   //dataMode: SCLK idles low/ data clocked on SCLK falling edge --> mode 0
-  SPI.beginTransaction(SPISettings(6000000, MSBFIRST, SPI_MODE0));
+  SPI.beginTransaction(SPISettings(600000, MSBFIRST, SPI_MODE0));
 
   for (int i = 0; i < length; i++)
   {

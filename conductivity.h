@@ -1,6 +1,6 @@
 
-#ifndef _FATIGUER_H_
-#define _FATIGUER_H_
+#ifndef _CONDUCTIVITY_H_
+#define _CONDUCTIVITY_H_
 
 #ifdef __cplusplus
 extern "C"  

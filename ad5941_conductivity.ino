@@ -1,4 +1,4 @@
-#include "fatiguer.h"
+#include "conductivity.h"
 #include <LibPrintf.h>
 #include "ad5940.h"
 #include "rcal.h"
@@ -142,8 +142,8 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
 
-  pinMode(A4, OUTPUT);
-  pinMode(A5, OUTPUT);
+  pinMode(6, OUTPUT);
+  pinMode(5, OUTPUT);
   select_r_cal(3);
 
   AD5940_MCUResourceInit(NULL);

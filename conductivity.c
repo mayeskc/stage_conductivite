@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "string.h"
 #include "math.h"
-#include "fatiguer.h"
+#include "conductivity.h"
 #include "../extras/printf/printf.h"
 
 /* Default LPDAC resolution(2.5V internal reference). */
