@@ -57,6 +57,7 @@ The **4-electrode method** reduces polarization effects and improves accuracy, e
 ---
 
 📂 Code Structure
+
    ad5940.c / .h – SPI communication and AD5941 configuration
 
    conductivity.h – user parameters (K, frequency, etc.)
