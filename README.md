@@ -54,3 +54,44 @@ Développé dans le cadre du projet **Terra Forma** au **LAAS-CNRS**, ce projet 
 1. **Cloner** le dépôt :
    ```bash
    git clone https://github.com/mayeskc/stage_conductivite.git
+Ouvrir le projet dans Arduino IDE.
+
+Sélectionner la carte Adafruit Feather M0.
+
+Téléverser le fichier ad5941_conductivity.ino.
+
+▶️ Utilisation
+Brancher la sonde et le module AD5941 à la Feather M0.
+
+Ouvrir le Moniteur Série à 115200 bauds.
+
+Plonger la sonde dans la solution.
+
+Lire les valeurs d’impédance et de conductivité affichées en temps réel.
+
+🧪 Calibration
+Définir la résistance RCAL dans rcal.h.
+
+Immergez la sonde dans une solution étalon connue.
+
+Ajuster la constante de cellule K dans conductivity.h.
+
+Utiliser les fonctions intégrées pour calibrer et valider la mesure.
+
+📂 Structure du dépôt
+bash
+Copier
+Modifier
+├── ad5941_conductivity.ino   # Firmware principal
+├── ad5940.c / ad5940.h       # Driver bas-niveau et configuration AD5941
+├── rcal.h                    # Valeur de la résistance d’étalonnage
+├── conductivity.h            # Constante K, paramètres utilisateur
+├── docs/
+│   └── schema_connexion.png  # Schéma de câblage
+├── LICENSE                   # Licence MIT
+📊 Exemple de sortie série
+makefile
+Copier
+Modifier
+Impedance: 523.47 Ω
+Conductivity: 2.87 mS/cm
