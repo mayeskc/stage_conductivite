@@ -1,97 +1,60 @@
-# 🌊 Mesure de Conductivité à 4 Électrodes avec AD5941 et Arduino
+# Water Conductivity Measurement with AD5941 and Feather M0
 
-Librairie **Arduino** et firmware pour mesurer la **conductivité de l'eau** via la méthode d'**impédance à 4 électrodes**, basée sur le composant **AD5941** (Analog Devices).  
-Développé dans le cadre du projet **Terra Forma** au **LAAS-CNRS**, ce projet allie technologie embarquée et instrumentation environnementale.
-
----
-
-## 📦 Présentation du matériel
-
-- **Carte** : Adafruit Feather M0 (SAMD21)
-- **Front-end analogique** : Module/pont AD5941 (PCB personnalisé)
-- **Sonde** : 4 électrodes (injection + et −, mesure + et −)
-- **Accessoires** : Résistance de calibration (RCAL), câbles Dupont
+## 📌 Description
+This project provides an **Arduino library** and **firmware** to measure water electrical conductivity using the **AD5941 analog front-end** (Analog Devices) and a **4-electrode probe**.  
+It is part of the **Terra Forma project**, aimed at continuous environmental monitoring.
 
 ---
 
-## ✨ Fonctionnalités principales
-
-- Pilotage du **AD5941** via **SPI** depuis Arduino (AFE, DDS, TIA, DFT configurés)
-- **Calibration** avec résistance étalon (RCAL) et calcul de RTIA
-- Mesure temps réel de l'**impédance** et conversion en **conductivité**
-- Affichage en direct sur **Moniteur Série** (115200 bauds)
-- Code modulaire, prêt à l’intégration dans une sonde multiparamètres connectée
+## 🔬 Background
+Electrical conductivity is a key indicator of water quality (pollution, salinity, groundwater inflows).  
+The **4-electrode method** reduces polarization effects and improves accuracy, especially in low-conductivity environments.
 
 ---
 
-## 🔌 Schéma de câblage
-
-| Feather M0 Pin     | AD5941 Pin             |
-|--------------------|------------------------|
-| 3V3                | AVDD, DVDD             |
-| GND                | AGND, DGND             |
-| MOSI (A5)          | MOSI                   |
-| MISO (A6)          | MISO                   |
-| SCK (A7)           | SCLK                   |
-| A2                 | CS                     |
-| A3                 | RESET                  |
-| D0                 | WAKEUP                 |
-| D1                 | INT                    |
-
-**Connexion électrodes** :
-
-- CE0 → Injection (+)  
-- AIN1 → Injection (−)  
-- AIN2 → Mesure (+)  
-- AIN3 → Mesure (−)  
-
-*(Ajouter ici `docs/schema_connexion.png` pour un visuel complet)*
+## 🛠 Required Hardware
+- **Adafruit Feather M0** board  
+- **AD5941 module** on a custom PCB  
+- **4-electrode conductivity probe**  
+- Calibration resistor (**RCAL**, e.g. 10 kΩ)  
+- SPI connections (MOSI, MISO, SCLK, CS, RESET, WAKEUP, INT)  
+- 3.3 V power supply  
 
 ---
 
-## ⚙️ Installation
-
-1. **Cloner** le dépôt :
+## 💻 Installation
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/mayeskc/stage_conductivite.git
-Ouvrir le projet dans Arduino IDE.
+2. Open ad5941_conductivity.ino in the Arduino IDE.
 
-Sélectionner la carte Adafruit Feather M0.
+3. Select Adafruit Feather M0 as the board and the correct serial port.
 
-Téléverser le fichier ad5941_conductivity.ino.
+4. Upload the program.
 
-▶️ Utilisation
-Brancher la sonde et le module AD5941 à la Feather M0.
+▶ Usage
+1. Connect the hardware according to the PCB wiring.
 
-Ouvrir le Moniteur Série à 115200 bauds.
+2. Update the RCAL value (rcal.h) and cell constant K (conductivity.h).
 
-Plonger la sonde dans la solution.
+3. Open the Serial Monitor at 115200 baud to view conductivity readings.
 
-Lire les valeurs d’impédance et de conductivité affichées en temps réel.
+4. Immerse the probe into the water sample.
 
-🧪 Calibration
-Définir la résistance RCAL dans rcal.h.
+📏 Calibration
+1. Connect the RCAL resistor between the measurement electrodes.
 
-Immergez la sonde dans une solution étalon connue.
+2. Run the program to compute the calibrated RTIA.
 
-Ajuster la constante de cellule K dans conductivity.h.
+3. Determine the cell constant K using known standard solutions.
 
-Utiliser les fonctions intégrées pour calibrer et valider la mesure.
+4. Update conductivity.h with the measured constant.
 
-📂 Structure du dépôt
-bash
-Copier
-Modifier
-├── ad5941_conductivity.ino   # Firmware principal
-├── ad5940.c / ad5940.h       # Driver bas-niveau et configuration AD5941
-├── rcal.h                    # Valeur de la résistance d’étalonnage
-├── conductivity.h            # Constante K, paramètres utilisateur
-├── docs/
-│   └── schema_connexion.png  # Schéma de câblage
-├── LICENSE                   # Licence MIT
-📊 Exemple de sortie série
-makefile
-Copier
-Modifier
-Impedance: 523.47 Ω
-Conductivity: 2.87 mS/cm
+📂 Code Structure
+ad5940.c / .h – SPI communication and AD5941 configuration
+
+conductivity.h – user parameters (K, frequency, etc.)
+
+rcal.h – calibration resistor value
+
+ad5941_conductivity.ino – main loop and data acquisition
