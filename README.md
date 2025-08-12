@@ -31,6 +31,8 @@ The **4-electrode method** reduces polarization effects and improves accuracy, e
 3. Select Adafruit Feather M0 as the board and the correct serial port.
 
 4. Upload the program.
+   
+---
 
 ▶ Usage
 1. Connect the hardware according to the PCB wiring.
@@ -40,6 +42,8 @@ The **4-electrode method** reduces polarization effects and improves accuracy, e
 3. Open the Serial Monitor at 115200 baud to view conductivity readings.
 
 4. Immerse the probe into the water sample.
+   
+---
 
 📏 Calibration
 1. Connect the RCAL resistor between the measurement electrodes.
@@ -49,12 +53,14 @@ The **4-electrode method** reduces polarization effects and improves accuracy, e
 3. Determine the cell constant K using known standard solutions.
 
 4. Update conductivity.h with the measured constant.
+   
+---
 
 📂 Code Structure
-ad5940.c / .h – SPI communication and AD5941 configuration
+   ad5940.c / .h – SPI communication and AD5941 configuration
 
-conductivity.h – user parameters (K, frequency, etc.)
+   conductivity.h – user parameters (K, frequency, etc.)
 
-rcal.h – calibration resistor value
+   rcal.h – calibration resistor value
 
-ad5941_conductivity.ino – main loop and data acquisition
+   ad5941_conductivity.ino – main loop and data acquisition
